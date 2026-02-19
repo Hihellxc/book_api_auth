@@ -1,5 +1,8 @@
+#ลองส่งโดยใช้ get และเลือก header แล้วใส่ key เป็ร Api-Key และ value เป็น 123456
+#เปลี่ยนจาก basic authentication มาเป็น API key authentication โดยสร้าง decorator ขึ้นมาใหม่ชื่อ require_api_key เพื่อเช็คว่า header ที่ส่งมามี Api-Key และตรงกับค่า API_KEY ที่กำหนดไว้หรือไม่ ถ้าไม่ตรงจะส่งกลับ error 401 Unauthorized
 from flask import Flask, request, jsonify
 from flask_cors import CORS, cross_origin
+from functools import wraps
 
 # Sample data (in-memory database for simplicity)
 books = [
@@ -17,12 +20,28 @@ app = Flask(__name__)
 CORS(app)
 app.config['CORS_HEADERS']='Content-Type'
 
+# Replace 'your_api_key' with your actual API key
+API_KEY = '123456'
+
+# API key authentication decorator ห่อเอนพ้อย์ที่ต้องการ protect ด้วย Api key 
+def require_api_key(func):
+    @wraps(func)
+    def decorated(*args, **kwargs):
+        if request.headers.get('Api-Key') == API_KEY:
+            return func(*args, **kwargs)
+        else:
+            return jsonify({"error": "Unauthorized"}), 401
+    return decorated
+
+
 @app.route("/")
 def hello_world():
     return "<p>Hello, World!</p>"
 
 # Create (POST) operation
 @app.route('/books', methods=['POST'])
+@cross_origin()
+@require_api_key
 def create_book():
     data = request.get_json()
 
@@ -38,13 +57,15 @@ def create_book():
 
 # Read (GET) operation - Get all books
 @app.route('/books', methods=['GET'])
+@require_api_key
 @cross_origin()
 def get_all_books():
     return jsonify({"books": books})
 
 # Read (GET) operation - Get a specific book by ID
 @app.route('/books/<int:book_id>', methods=['GET'])
-
+@cross_origin()
+@require_api_key
 def get_book(book_id):
     book = next((b for b in books if b["id"] == book_id), None)
     if book:
@@ -54,6 +75,8 @@ def get_book(book_id):
 
 # Update (PUT) operation
 @app.route('/books/<int:book_id>', methods=['PUT'])
+@cross_origin()
+@require_api_key
 def update_book(book_id):
     book = next((b for b in books if b["id"] == book_id), None)
     if book:
@@ -65,6 +88,8 @@ def update_book(book_id):
     
 # Delete operation
 @app.route('/books/<int:book_id>', methods=['DELETE'])
+@cross_origin()
+@require_api_key
 def delete_book(book_id):
     global books
     books = [b for b in books if b["id"] != book_id]

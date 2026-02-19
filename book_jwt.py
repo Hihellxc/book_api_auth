@@ -1,5 +1,10 @@
+# สร้าง username และ password สำหรับ basic authentication 
+# ใช้ http/login เพื่อขอรับ JWT token โดยส่ง username และ password มาใน body ของ request
+# กด get โดยใช้ Auth และเลือก Bearer Token แล้วใส่ token ที่ได้รับจาก http/login เพื่อเข้าถึง endpoint ที่ต้องการ authentication
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS, cross_origin
+from flask_jwt_extended import JWTManager, jwt_required, create_access_token    
 
 # Sample data (in-memory database for simplicity)
 books = [
@@ -17,12 +22,32 @@ app = Flask(__name__)
 CORS(app)
 app.config['CORS_HEADERS']='Content-Type'
 
+# Set up JWT
+app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key'#สำคัญมาก ห้ามหายหรือเปลี่ยนแปลงโดยไม่จำเป็น เพราะจะทำให้ token ที่สร้างขึ้นไม่สามารถใช้งานได้
+jwt = JWTManager(app)
+
 @app.route("/")
 def hello_world():
     return "<p>Hello, World!</p>"
 
+# Authentication endpoint to get JWT token
+@app.route('/login', methods=['POST']) #uer ส่ง username และ password มาใน body ของ request เพื่อขอรับ JWT token
+def login():
+    data = request.get_json()
+    username = data.get('username', None)
+    password = data.get('password', None)
+
+    # In a real-world scenario, you would check the credentials against a database
+    if username == 'user' and password == 'pass': #บรรทัดนี้เปลี่ยนชื่อ usr และ pass เป็นชื่อที่ต้องการ และต้องตรงกับที่ส่งมาใน body ของ request
+        access_token = create_access_token(identity=username)
+        return jsonify(access_token=access_token), 200
+    else:
+        return jsonify({"error": "Invalid credentials"}), 401
+
 # Create (POST) operation
 @app.route('/books', methods=['POST'])
+@cross_origin()
+@jwt_required()
 def create_book():
     data = request.get_json()
 
@@ -39,12 +64,14 @@ def create_book():
 # Read (GET) operation - Get all books
 @app.route('/books', methods=['GET'])
 @cross_origin()
+@jwt_required()
 def get_all_books():
     return jsonify({"books": books})
 
 # Read (GET) operation - Get a specific book by ID
 @app.route('/books/<int:book_id>', methods=['GET'])
-
+@cross_origin()
+@jwt_required()
 def get_book(book_id):
     book = next((b for b in books if b["id"] == book_id), None)
     if book:
@@ -54,6 +81,8 @@ def get_book(book_id):
 
 # Update (PUT) operation
 @app.route('/books/<int:book_id>', methods=['PUT'])
+@cross_origin()
+@jwt_required()
 def update_book(book_id):
     book = next((b for b in books if b["id"] == book_id), None)
     if book:
@@ -65,6 +94,8 @@ def update_book(book_id):
     
 # Delete operation
 @app.route('/books/<int:book_id>', methods=['DELETE'])
+@cross_origin()
+@jwt_required()
 def delete_book(book_id):
     global books
     books = [b for b in books if b["id"] != book_id]
