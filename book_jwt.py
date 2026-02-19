@@ -6,6 +6,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS, cross_origin
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token    
 
+
 # Sample data (in-memory database for simplicity)
 books = [
     { "id": 1, "title": "Teenage Mutant Ninja Turtles x Naruto", "author": "Caleb Goellner", "image_url": "https://m.media-amazon.com/images/I/91iA+EfedXL._SY466_.jpg", "price": 15.80 },
